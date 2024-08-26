@@ -58,3 +58,5 @@ class COVIDGR(Dataset):
         label = self.labels[idx]
         return img, label
     
+# train_dataset = get_dataset("COVIDGR", mode="Val")
+# print(len(train_dataset))

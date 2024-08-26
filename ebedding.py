@@ -3,18 +3,19 @@ import torch.nn as nn
 import os
 import timm
 import config
-from pytorch_lightning import seed_everything
-from utils import init_logfile, log, AverageMeters
+# from pytorch_lightning import seed_everything
+from utils import init_logfile, log, AverageMeter
 import torch
 from torchcontrib.optim import SWA
 import argparse
-from dataset import get_dataset, Dataloader
+from dataset import get_dataset
+from torch.utils.data import DataLoader
 
 parser = argparse.ArgumentParser(description="DINO Train")
 parser.add_argument('--mode', type=str, default='train')
 parser.add_argument('--dataset', type=str, default="COVIDGR")
-parser.add_argument('--batch', default=4 , type=int)
-parser.add_argument('--out_dir', type=str, default=".")
+parser.add_argument('--batch', default=32 , type=int)
+parser.add_argument('--outdir', type=str, default=".")
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
                     help='initial learning rate', dest='lr')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
@@ -44,8 +45,8 @@ def train(train_loader,
           epochs,
           log_file_name):
     
-    loss_train_meter = AverageMeters()
-    loss_val_meter = AverageMeters()
+    loss_train_meter = AverageMeter()
+    loss_val_meter = AverageMeter()
     
     best_score = 0.0
     for i in tqdm(range(epochs)):
@@ -79,8 +80,8 @@ def train(train_loader,
 
         if not best_score or loss_val_meter.avg < best_score:
             best_score = loss_train_meter.avg
-            torch.save(model_vits, os.path.join(args.out_dir,"best_vits.pth"))
-            torch.save(model_cnn, os.path.join(args.out_dir,"best_cnn.pth"))
+            torch.save(model_vits, os.path.join(args.outdir,"best_vits.pth"))
+            torch.save(model_cnn, os.path.join(args.outdir,"best_cnn.pth"))
             
         log(log_file_name, f"{i}\t{loss_train_meter.avg}\t{loss_val_meter.avg}")
         loss_train_meter.reset()
@@ -90,7 +91,7 @@ def train(train_loader,
             
 def main():
     os.environ["CUDA_VISIBLE_DEVICE"] = "0"
-    seed_everything(config.seed)
+    # seed_everything(config.seed)
     os.makedirs(args.outdir, exist_ok=True)
 
     # dataset
@@ -98,17 +99,17 @@ def main():
     val_dataset = get_dataset(args.dataset, mode="Val")
     test_dataset = get_dataset(args.dataset, mode="Test")
 
-    train_loader = Dataloader(train_dataset, batch_size=args.batch, shuffle=True)
-    val_loader = Dataloader(val_dataset, batch_size=args.batch, shuffle=False)
-    test_loader = Dataloader(test_dataset, batch_size=args.batch, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch, shuffle=False)
 
     log_file_name = os.path.join(args.outdir, 'log.txt')
     if not os.path.isfile(log_file_name):
         init_logfile(log_file_name, "epoch\Train_loss\Test_loss")
     
     # model
-    model_cnn = timm.create_model(config.cnn_name, pretrained=True)
-    model_vits = timm.create_model(config.vits_name, prtrained=True)
+    model_cnn = timm.create_model(config.cnn_name, pretrained=True).cuda()
+    model_vits = timm.create_model(config.vits_name, pretrained=True).cuda()
     
     # optimizer
     optimizer_cnn = SWA(torch.optim.Adam(model_cnn.parameters(), lr=1e-3))

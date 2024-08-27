@@ -3,6 +3,14 @@ import os
 from config import covid_label_str2num, seed, image_transform, valid_transform, covid_img_dir
 from sklearn.model_selection import train_test_split
 from PIL import Image
+from tqdm import tqdm
+import random
+from torchvision import transforms
+import torch
+
+
+
+
 
 def get_dataset(dataset, 
                 mode="Train"):
@@ -10,9 +18,117 @@ def get_dataset(dataset,
         return COVIDGR(img_dir=covid_img_dir,
                        mode=mode)
     
+    if dataset == "SIPADMEK":
+        return 
+
+
+
+
+
+
+
+            
+
+class SIPADMEK(Dataset):
+    
+    
+    def extract_data(self, image_dir: str,
+                class_name: str,
+                output_dir="Dataset\SIPADMEK\process",
+                class_map = {
+                    "im_Dyskeratotic": 0, # abnormal
+                    "im_Koilocytotic": 0, # abnormal
+                    "im_Metaplastic": 1, # Benign
+                    "im_Parabasal": 2, # normal
+                    "im_Superficial-Intermediate": 2, # normal
+                        }
+                ):
+    
+    
+        os.makedirs(output_dir, exist_ok=True) # check exist
+        class_label = class_map[class_name]
+        
+        label_dir = os.path.join(output_dir, str(class_label))
+        os.makedirs(label_dir, exist_ok=True)
+        
+        count = 0
+        for file_name in tqdm(os.listdir(image_dir)):
+            if "bmp" in file_name:
+                count += 1
+                file_path = os.path.join(image_dir, file_name)
+                img = Image.open(file_path).convert("RGB")
+                base_name = file_name.split(".")[0]
+                output_path = os.path.join(label_dir, f"{class_name}{base_name}.png")
+                img.save(output_path)
+        print(count)
+
+    
+    def split_data(self, img_dir, train_size=0.7, val_size=0.1, test_size=0.2):
+        random.seed("22520691")
+        train_img, val_img, test_img = [], [], []
+        train_label, val_label, test_label = [], [], []
+        
+        for label_name in os.listdir(img_dir):
+            label_folder = os.path.join(img_dir, label_name)
+            tmp = []
+            tmp_label = []
+            
+            for file_name in os.listdir(label_folder):
+                file_path = os.path.join(label_folder, file_name)
+                tmp.append(file_path)
+                tmp_label.append(label_name)
+            
+            combined = list(zip(tmp, tmp_label))
+            random.shuffle(combined)
+            tmp, tmp_label = zip(*combined)
+            
+            n_train = int(len(tmp) * train_size)
+            n_val = int(len(tmp) * val_size)
+            
+            train_img += tmp[:n_train]
+            val_img += tmp[n_train:n_train + n_val]
+            test_img += tmp[n_train + n_val:]
+            
+            train_label += tmp_label[:n_train]
+            val_label += tmp_label[n_train:n_train + n_val]
+            test_label += tmp_label[n_train + n_val:]
+        
+        return train_img, val_img, test_img, train_label, val_label, test_label
+    
+    
+    def __init__(self, img_dir, mode="Train",
+                 transform=transforms.Compose([transforms.Resize((384, 384)),
+                                               transforms.RandomApply([transforms.ColorJitter(0.2, 0.2, 0.2),transforms.RandomPerspective(distortion_scale=0.2),], p=0.3),
+                                               transforms.RandomApply([transforms.ColorJitter(0.2, 0.2, 0.2),transforms.RandomAffine(degrees=10),], p=0.3),
+                                               transforms.RandomVerticalFlip(p=0.3),
+                                               transforms.RandomHorizontalFlip(p=0.3),
+                                               transforms.ToTensor(),
+                                               ])):
+        
+        self.transform = transform
+        
+        train_img, val_img, test_img, train_label, val_label, test_label = self.split_data(img_dir)
+        if mode == "Train":
+            self.img_paths, self.labels = train_img, train_label
+        elif mode == "Val":
+            self.img_paths, self.labels = val_img, val_label
+        else:
+            self.img_paths, self.labels = test_img, test_label
+        
+    def __len__(self) -> int:
+        return len(self.img_paths)
+    
+    def __getitem__(self, index):
+        img_path = self.img_paths[index]
+        img = Image.open(img_path).convert("RGB")
+        if self.transform:
+            img = self.transform(img)
+        label = torch.tensor([float(self.labels[index])])
+        return img, label
+                
+
 class COVIDGR(Dataset):
     def __init__(self, img_dir, mode="Train"):
-        
         img_paths = []
         labels = []
         
@@ -60,3 +176,20 @@ class COVIDGR(Dataset):
     
 # train_dataset = get_dataset("COVIDGR", mode="Val")
 # print(len(train_dataset))
+
+
+
+# extract_data("D:\Self-Supervise-Learning-In-Medical-Classification-task-\Dataset\SIPADMEK\im_Dyskeratotic\CROPPED",
+#              "im_Dyskeratotic")
+
+# extract_data("D:\Self-Supervise-Learning-In-Medical-Classification-task-\Dataset\SIPADMEK\im_Koilocytotic\CROPPED", 
+#              "im_Koilocytotic")
+
+# extract_data("D:\Self-Supervise-Learning-In-Medical-Classification-task-\Dataset\SIPADMEK\im_Metaplastic\im_Metaplastic\CROPPED", 
+#              "im_Metaplastic")
+
+# extract_data("D:\Self-Supervise-Learning-In-Medical-Classification-task-\Dataset\SIPADMEK\im_Parabasal\im_Parabasal\CROPPED", 
+#              "im_Parabasal")
+
+# extract_data("D:\Self-Supervise-Learning-In-Medical-Classification-task-\Dataset\SIPADMEK\im_Superficial-Intermediate\im_Superficial-Intermediate\CROPPED", 
+#              "im_Superficial-Intermediate")

@@ -5,7 +5,7 @@ import os
 import shutil
 import numpy as np
 import torch
-
+from PIL import Image
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -84,3 +84,17 @@ def copy_code(outdir):
             os.mkdir(codedir)
         shutil.copy2(os.path.join(r,f), os.path.join(codedir,f))
     print("Code copied to '{}'".format(outdir))
+    
+def extract_data(image_dir: str,
+                 output_dir: str): # cropped folder 
+    
+    os.makedirs(output_dir, exist_ok=True) # check exist
+    
+    for file_name in os.listdir(image_dir):
+        if "bmp" in file_name:
+            file_path = os.path.join(image_dir, file_name)
+            img = Image.open(file_path, "rbg")
+            output_path = os.path.join(output_dir, f"{file_name.split(".")[0]}.png")
+            img.save(output_path)
+
+            

@@ -18,7 +18,7 @@ parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
                     help='initial learning rate', dest='lr')
 parser.add_argument('--img_dir', type=str, help='folder of images')
 parser.add_argument('--outdir', type=str, help='folder to save denoiser and training log')
-parser.add_argument('--epochs', default=10, type=int, metavar='N',
+parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--batch', default=10, type=int, metavar='N')
 parser.add_argument('--dataset', type=str, default="SIPADMEK")
@@ -56,12 +56,16 @@ test_loader = DataLoader(test_dataset, batch_size=args.batch, shuffle=False)
 model = torch.load("experiment/sipadmek/best_vits.pth")
 model.fc = nn.Linear(in_features=2048, out_features=3, bias=True)
 model.cuda()
+# model = torch.load(r"experiment\sipadmek\best.pth").cuda()
 
 criterion = nn.CrossEntropyLoss(size_average=None, reduce=None, reduction='mean').cuda()
 optimizer = Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
 
 # Optionally, add a learning rate scheduler
 scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
+
+acc_meter = AverageMeter()
+losses_meter = AverageMeter()
 
 acc_meter = AverageMeter()
 losses_meter = AverageMeter()
@@ -109,4 +113,4 @@ for epoch in tqdm(range(args.epochs)):
 
     if not best_acc or acc_meter.avg > best_acc:
         best_acc = acc_meter.avg
-        torch.save(model, f"{args.outdir}/best.pth")
+        torch.save(model, f"{args.outdir}/best_.pth")

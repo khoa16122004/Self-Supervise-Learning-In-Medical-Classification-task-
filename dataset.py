@@ -7,6 +7,7 @@ from tqdm import tqdm
 import random
 from torchvision import transforms
 import torch
+import shutil
 
 
 
@@ -16,8 +17,15 @@ def get_dataset(dataset,
 
     
     if dataset == "SIPADMEK":
-        return SIPADMEK(img_dir=img_dir,
-                        mode=mode)
+        if mode == "Train":
+            return SIPADMEK(img_dir=img_dir,
+                            mode=mode)
+        else:
+            return SIPADMEK(img_dir=img_dir,
+                            mode=mode,
+                            transform=transforms.Compose([transforms.Resize((384, 384)), 
+                                                          transforms.ToTensor()])
+                            )
     
                 
 
@@ -52,7 +60,7 @@ class SIPADMEK(Dataset):
                 img.save(output_path)
         print(count)
 
-    
+
     def split_data(self, img_dir, train_size=0.7, val_size=0.1, test_size=0.2):
         random.seed("22520691")
         train_img, val_img, test_img = [], [], []
@@ -82,8 +90,16 @@ class SIPADMEK(Dataset):
             train_label += tmp_label[:n_train]
             val_label += tmp_label[n_train:n_train + n_val]
             test_label += tmp_label[n_train + n_val:]
-        
+            
         return train_img, val_img, test_img, train_label, val_label, test_label
+
+    def save_to_txt(self, image_paths, labels, split_name, output_dir):
+        txt_file_path = os.path.join(output_dir, f"{split_name}.txt")
+        with open(txt_file_path, 'w') as f:
+            for img_path, label_name in zip(image_paths, labels):
+                f.write(f"{img_path}, {label_name}\n")
+    
+
     
     
     def __init__(self, img_dir, mode="Train",
@@ -97,14 +113,21 @@ class SIPADMEK(Dataset):
         
         self.transform = transform
         
-        train_img, val_img, test_img, train_label, val_label, test_label = self.split_data(img_dir)
+        # train_img, val_img, test_img, train_label, val_label, test_label = self.split_data(img_dir)
         if mode == "Train":
-            self.img_paths, self.labels = train_img, train_label
+            path_file = os.path.join(img_dir, "train.txt")
         elif mode == "Val":
-            self.img_paths, self.labels = val_img, val_label
+            path_file = os.path.join(img_dir, "val.txt")
         else:
-            self.img_paths, self.labels = test_img, test_label
+            path_file = os.path.join(img_dir, "test.txt")
         
+        with open(path_file, 'r') as f:
+            lines = f.readlines()
+            lines = [line.strip() for line in lines]
+            img_paths = [line.split(", ")[0] for line in lines]
+            labels = [line.split(", ")[1] for line in lines]
+        self.img_paths, self.labels = img_paths, labels
+
     def __len__(self) -> int:
         return len(self.img_paths)
     
@@ -115,7 +138,14 @@ class SIPADMEK(Dataset):
             img = self.transform(img)
         label = int(self.labels[index])
         return img, label
-                
+    
+a = SIPADMEK(img_dir="Dataset\SIPADMEK\process", mode="Train")
+
+# train_img, val_img, test_img, train_label, val_label, test_label = a.split_data("Dataset\SIPADMEK\process")
+# a.save_to_txt(train_img, train_label, "train", "Dataset\SIPADMEK\process")
+# a.save_to_txt(test_img, test_label, "test", "Dataset\SIPADMEK\process")
+# a.save_to_txt(val_img, val_label, "val", "Dataset\SIPADMEK\process")
+           
 
 class COVIDGR(Dataset):
     def __init__(self, img_dir, mode="Train"):

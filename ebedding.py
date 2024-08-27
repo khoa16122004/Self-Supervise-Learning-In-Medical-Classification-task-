@@ -54,7 +54,7 @@ def train(train_loader,
         model_cnn.train()
         model_vits.train()
         
-        for imgs, _ in train_loader:
+        for imgs, _ in tqdm(train_loader):
             imgs = imgs.cuda()
             
             pred_vits = model_vits(imgs)

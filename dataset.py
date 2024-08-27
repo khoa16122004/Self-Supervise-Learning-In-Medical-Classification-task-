@@ -113,7 +113,7 @@ class SIPADMEK(Dataset):
         img = Image.open(img_path).convert("RGB")
         if self.transform:
             img = self.transform(img)
-        label = torch.tensor([float(self.labels[index])])
+        label = int(self.labels[index])
         return img, label
                 
 

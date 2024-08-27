@@ -24,16 +24,4 @@ seed = 16122004
 num_class = 2
 
 
-# COVID_CONFIG
-covid_img_dir = "Dataset/COVIDGR_1.0"
-covid_label_str2num = {
-    "P": 0,
-    "N": 1,
-}
-
-OUTDIR_TRAIN = "CASS_COVID"
-epochs = 100
-batch_size = 16
-dataset = "COVIDGR"
-
 

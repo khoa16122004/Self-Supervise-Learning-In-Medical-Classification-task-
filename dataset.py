@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 import os
-from config import covid_label_str2num, seed, image_transform, valid_transform, covid_img_dir
+from config import *
 from sklearn.model_selection import train_test_split
 from PIL import Image
 from tqdm import tqdm
@@ -10,28 +10,18 @@ import torch
 
 
 
-
-
 def get_dataset(dataset, 
+                img_dir,
                 mode="Train"):
-    if dataset == "COVIDGR":
-        return COVIDGR(img_dir=covid_img_dir,
-                       mode=mode)
+
     
     if dataset == "SIPADMEK":
-        return 
-
-
-
-
-
-
-
-            
+        return SIPADMEK(img_dir=img_dir,
+                        mode=mode)
+    
+                
 
 class SIPADMEK(Dataset):
-    
-    
     def extract_data(self, image_dir: str,
                 class_name: str,
                 output_dir="Dataset\SIPADMEK\process",

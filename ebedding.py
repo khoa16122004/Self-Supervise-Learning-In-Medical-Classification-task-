@@ -13,8 +13,9 @@ from torch.utils.data import DataLoader
 
 parser = argparse.ArgumentParser(description="DINO Train")
 parser.add_argument('--mode', type=str, default='train')
-parser.add_argument('--dataset', type=str, default="COVIDGR")
-parser.add_argument('--batch', default=32 , type=int)
+parser.add_argument('--img_dir', type=str)
+parser.add_argument('--dataset', type=str, default="SIPADMEK")
+parser.add_argument('--batch', default=16 , type=int)
 parser.add_argument('--outdir', type=str, default=".")
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
                     help='initial learning rate', dest='lr')
@@ -23,7 +24,7 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
 parser.add_argument('--lr_step_size', type=int, default=100,
                     help='How often to decrease learning by gamma.')
 parser.add_argument('--gamma', type=float, default=0.1)
-parser.add_argument('--epochs', type=int, default=200)
+parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--img_path', type=str, default=None)
 args = parser.parse_args()
 
@@ -32,7 +33,7 @@ def sim_loss(x, y): # similarity loss
     x = nn.functional.normalize(x, dim=-1, p=2)
     y = nn.functional.normalize(y, dim=-1, p=2)
 
-    return 2 - 2 * (x * y).sum(dim=-1)
+    return 2 - 2 * (x * y).sum(dim=-1) # 1 - similarity cos(x, y)
 
 def train(train_loader,
           val_loader,
@@ -95,9 +96,9 @@ def main():
     os.makedirs(args.outdir, exist_ok=True)
 
     # dataset
-    train_dataset = get_dataset(args.dataset, mode="Train")
-    val_dataset = get_dataset(args.dataset, mode="Val")
-    test_dataset = get_dataset(args.dataset, mode="Test")
+    train_dataset = get_dataset(args.dataset, mode="Train", img_dir=args.img_dir)
+    val_dataset = get_dataset(args.dataset, mode="Val", img_dir=args.img_dir)
+    test_dataset = get_dataset(args.dataset, mode="Test", img_dir=args.img_dir)
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch, shuffle=False)
